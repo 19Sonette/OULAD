@@ -275,9 +275,9 @@
     .table-header h2 { font-size: 14px; }
     .table-header p { margin: 3px 0 0; color: var(--muted); font-size: 10px; }
     .search { width: min(230px, 100%); height: 35px; padding: 0 10px; border: 1px solid #dedbd6; border-radius: 5px; background: white; font-size: 11px; }
-    .table-scroll { overflow-x: auto; }
+    .table-scroll { max-height: 420px; overflow: auto; }
     table { width: 100%; border-collapse: collapse; text-align: left; }
-    thead { background: #f7f5f2; }
+    thead { position: sticky; top: 0; z-index: 1; background: #f7f5f2; }
     th { padding: 10px 18px; color: #74797d; font-size: 9px; font-weight: 680; letter-spacing: .06em; text-transform: uppercase; }
     td { padding: 10px 18px; border-top: 1px solid #efede9; color: #4c545a; font-size: 11px; }
     tbody tr:hover { background: #fdf9f7; }
@@ -299,6 +299,10 @@
     .click-log-entry:last-child { border-bottom: 0; }
     .click-log-entry time { flex: 0 0 auto; color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
     .click-log-empty { padding: 16px 18px; color: var(--muted); font-size: 11px; }
+    .click-notification { position: fixed; right: 20px; bottom: 20px; z-index: 5; width: min(360px, calc(100vw - 40px)); padding: 14px 16px; border: 1px solid #d6e2d9; border-left: 4px solid var(--sage); border-radius: 8px; background: white; box-shadow: 0 8px 28px rgb(36 41 47 / 14%); }
+    .click-notification[hidden] { display: none; }
+    .click-notification-title { margin: 0; color: #607767; font-size: 10px; font-weight: 730; letter-spacing: .08em; text-transform: uppercase; }
+    .click-notification-message { margin: 4px 0 0; color: var(--ink); font-size: 12px; }
     .footnote { margin: 14px 0 0; color: #85898c; font-size: 10px; }
 
     .back-link { display: inline-block; margin: 0 0 17px; color: var(--red-deep); font-size: 11px; font-weight: 660; }
@@ -465,6 +469,16 @@
         </div>
       </section>
 
+      <section class="panel click-log" aria-labelledby="click-log-heading">
+        <div class="click-log-header">
+          <h2 id="click-log-heading">Simulated click log</h2>
+          <p>Latest 12 events · demo only</p>
+        </div>
+        <ol class="click-log-list" id="click-log-list" aria-live="polite" aria-relevant="additions">
+          <li class="click-log-empty" id="click-log-empty">Waiting for simulated click activity…</li>
+        </ol>
+      </section>
+
       <section id="learners" aria-labelledby="learners-heading">
         <div class="section-heading">
           <div>
@@ -484,7 +498,7 @@
               <input class="search" id="learner-search" type="search" placeholder="Search learner records…" autocomplete="off">
             </label>
           </div>
-          <div class="table-scroll">
+          <div class="table-scroll" tabindex="0" aria-label="Scrollable learner records">
             <table>
               <thead>
                 <tr>
@@ -510,15 +524,6 @@
           <div class="table-footer" id="result-count"><%= analytics.total.toLocaleString("en-US") %> learners</div>
         </div>
       </section>
-      <section class="panel click-log" aria-labelledby="click-log-heading">
-        <div class="click-log-header">
-          <h2 id="click-log-heading">Simulated click log</h2>
-          <p>Latest 12 events · demo only</p>
-        </div>
-        <ol class="click-log-list" id="click-log-list" aria-live="polite" aria-relevant="additions">
-          <li class="click-log-empty" id="click-log-empty">Waiting for simulated click activity…</li>
-        </ol>
-      </section>
       <p class="footnote">Historical OULAD sample data with simulated live updates; this demo is not connected to Google Classroom.</p>
     <% } else { %>
       <% const learner = learners[0]; %>
@@ -542,6 +547,12 @@
       </section>
     <% } %>
   </main>
+  <% if (!isDetail) { %>
+    <aside class="click-notification" id="click-notification" role="status" aria-live="polite" aria-atomic="true" hidden>
+      <p class="click-notification-title">New simulated click activity</p>
+      <p class="click-notification-message" id="click-notification-message"></p>
+    </aside>
+  <% } %>
 
   <script>
     const searchInput = document.getElementById("learner-search");
@@ -571,8 +582,11 @@
       const liveUpdated = document.getElementById("demo-updated");
       const clickLog = document.getElementById("click-log-list");
       const clickLogEmpty = document.getElementById("click-log-empty");
+      const clickNotification = document.getElementById("click-notification");
+      const clickNotificationMessage = document.getElementById("click-notification-message");
       const numberFormat = new Intl.NumberFormat("en-US");
       const stream = new EventSource(`/api/demo/stream?week=<%= week %>`);
+      let notificationTimeout;
 
       stream.onopen = () => {
         liveStatus.dataset.state = "live";
@@ -617,7 +631,8 @@
           const entry = document.createElement("li");
           entry.className = "click-log-entry";
           const message = document.createElement("span");
-          message.textContent = `Learner ${update.clickEvent.learnerId} recorded +${numberFormat.format(update.clickEvent.clicksAdded)} simulated clicks (total: ${numberFormat.format(update.clickEvent.totalClicks)})`;
+          const activityMessage = `Learner ${update.clickEvent.learnerId} recorded +${numberFormat.format(update.clickEvent.clicksAdded)} simulated clicks (total: ${numberFormat.format(update.clickEvent.totalClicks)})`;
+          message.textContent = activityMessage;
           const time = document.createElement("time");
           time.dateTime = update.clickEvent.occurredAt;
           time.textContent = new Date(update.clickEvent.occurredAt).toLocaleTimeString();
@@ -626,6 +641,13 @@
           while (clickLog.children.length > 12) {
             clickLog.removeChild(clickLog.lastElementChild);
           }
+
+          clickNotificationMessage.textContent = activityMessage;
+          clickNotification.hidden = false;
+          clearTimeout(notificationTimeout);
+          notificationTimeout = setTimeout(() => {
+            clickNotification.hidden = true;
+          }, 2200);
         }
 
         liveStatus.dataset.state = "live";
