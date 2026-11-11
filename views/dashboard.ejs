@@ -75,6 +75,11 @@
     .brand-name { font-size: 14px; font-weight: 740; letter-spacing: .025em; }
     .brand-caption { margin-left: 2px; color: var(--muted); font-size: 11px; }
     .course-meta { color: #555d64; font-size: 12px; }
+    .demo-status { display: inline-flex; align-items: center; gap: 7px; color: #607767; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .demo-status::before { width: 7px; height: 7px; border-radius: 50%; background: currentColor; content: ""; }
+    .demo-status[data-state="connecting"] { color: var(--gold); }
+    .demo-status[data-state="offline"] { color: var(--red); }
+    .demo-updated { margin-left: 5px; color: var(--muted); font-size: 10px; font-weight: 400; letter-spacing: 0; text-transform: none; }
 
     main { width: min(1160px, calc(100% - 56px)); margin: 0 auto; padding: 34px 0 56px; }
 
@@ -285,6 +290,15 @@
     .click-count { font-variant-numeric: tabular-nums; }
     .table-footer { padding: 11px 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
     .empty-state { padding: 24px 18px; color: var(--muted); font-size: 12px; text-align: center; }
+    .click-log { margin-top: 18px; overflow: hidden; }
+    .click-log-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 15px 18px; border-bottom: 1px solid var(--line); }
+    .click-log-header h2 { font-size: 13px; }
+    .click-log-header p { margin: 0; color: var(--muted); font-size: 10px; }
+    .click-log-list { display: grid; max-height: 280px; gap: 0; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+    .click-log-entry { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 10px 18px; border-bottom: 1px solid #efede9; color: #4c545a; font-size: 11px; }
+    .click-log-entry:last-child { border-bottom: 0; }
+    .click-log-entry time { flex: 0 0 auto; color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+    .click-log-empty { padding: 16px 18px; color: var(--muted); font-size: 11px; }
     .footnote { margin: 14px 0 0; color: #85898c; font-size: 10px; }
 
     .back-link { display: inline-block; margin: 0 0 17px; color: var(--red-deep); font-size: 11px; font-weight: 660; }
@@ -346,7 +360,13 @@
         <span class="brand-name">OULAD</span>
         <span class="brand-caption">Learning analytics</span>
       </a>
-      <span class="course-meta">Module FFF <span aria-hidden="true">·</span> 2014J</span>
+      <div>
+        <% if (!isDetail) { %>
+          <span class="demo-status" id="demo-status" data-state="connecting" role="status">Simulated live demo</span>
+          <span class="demo-updated" id="demo-updated">Connecting…</span>
+        <% } %>
+        <span class="course-meta">Module FFF <span aria-hidden="true">·</span> 2014J</span>
+      </div>
     </div>
   </header>
 
@@ -382,22 +402,22 @@
       <section class="metrics" aria-label="Cohort summary">
         <article class="metric">
           <div class="metric-label">Learners</div>
-          <div class="metric-value"><%= analytics.total.toLocaleString("en-US") %></div>
+          <div class="metric-value" id="live-total"><%= analytics.total.toLocaleString("en-US") %></div>
           <div class="metric-detail">In this cohort</div>
         </article>
         <article class="metric alert">
           <div class="metric-label">No clicks</div>
-          <div class="metric-value"><%= analytics.flaggedCount.toLocaleString("en-US") %></div>
+          <div class="metric-value" id="live-flagged"><%= analytics.flaggedCount.toLocaleString("en-US") %></div>
           <div class="metric-detail">During the 14-day window</div>
         </article>
         <article class="metric alert">
           <div class="metric-label">Share with no clicks</div>
-          <div class="metric-value"><%= analytics.flaggedRate.toFixed(1) %>%</div>
+          <div class="metric-value" id="live-rate"><%= analytics.flaggedRate.toFixed(1) %>%</div>
           <div class="metric-detail">Of all learners</div>
         </article>
         <article class="metric">
           <div class="metric-label">Average clicks</div>
-          <div class="metric-value"><%= analytics.averageClicks.toFixed(1) %></div>
+          <div class="metric-value" id="live-average"><%= analytics.averageClicks.toFixed(1) %></div>
           <div class="metric-detail">Per learner</div>
         </article>
       </section>
@@ -417,7 +437,7 @@
             </div>
             <div class="activity-list" role="img" aria-label="Learner counts by click range">
               <% analytics.activityBands.forEach(band => { %>
-                <div class="activity-row">
+                <div class="activity-row" data-band="<%= band.label %>">
                   <span class="activity-label"><%= band.label %></span>
                   <span class="track"><span class="fill" style="display: block; width: <%= (band.count / analytics.maxActivityCount * 100).toFixed(1) %>%;"></span></span>
                   <span class="activity-count"><%= band.count.toLocaleString("en-US") %></span>
@@ -433,12 +453,12 @@
             </div>
             <div class="flag-summary">
               <div class="flag-number">
-                <strong><%= analytics.flaggedRate.toFixed(1) %>%</strong>
+                <strong id="live-summary-rate"><%= analytics.flaggedRate.toFixed(1) %>%</strong>
                 <span>with no recorded clicks</span>
               </div>
               <div class="flag-legend">
-                <div class="legend-item"><span class="legend-dot"></span><strong><%= analytics.flaggedCount.toLocaleString("en-US") %></strong> no clicks</div>
-                <div class="legend-item"><span class="legend-dot"></span><strong><%= (analytics.total - analytics.flaggedCount).toLocaleString("en-US") %></strong> clicks recorded</div>
+                <div class="legend-item"><span class="legend-dot"></span><strong id="live-summary-flagged"><%= analytics.flaggedCount.toLocaleString("en-US") %></strong> no clicks</div>
+                <div class="legend-item"><span class="legend-dot"></span><strong id="live-summary-active"><%= (analytics.total - analytics.flaggedCount).toLocaleString("en-US") %></strong> clicks recorded</div>
               </div>
             </div>
           </article>
@@ -476,7 +496,7 @@
               </thead>
               <tbody id="learner-rows">
                 <% learners.forEach(learner => { %>
-                  <tr data-search="<%= `${learner.id} ${learner.risk === 1 ? "no clicks" : "clicks recorded"}`.toLowerCase() %>">
+                  <tr data-learner-id="<%= learner.id %>" data-search="<%= `${learner.id} ${learner.risk === 1 ? "no clicks" : "clicks recorded"}`.toLowerCase() %>">
                     <td><a class="learner-link" href="/learners/<%= encodeURIComponent(learner.id) %>?week=<%= week %>"><%= learner.id %></a></td>
                     <td><span class="status <%= learner.risk === 1 ? "flagged" : "clear" %>"><%= learner.risk === 1 ? "No clicks" : "Clicks recorded" %></span></td>
                     <td class="click-count"><%= learner.clicks.toLocaleString("en-US") %></td>
@@ -490,7 +510,16 @@
           <div class="table-footer" id="result-count"><%= analytics.total.toLocaleString("en-US") %> learners</div>
         </div>
       </section>
-      <p class="footnote">Sample data for demonstration.</p>
+      <section class="panel click-log" aria-labelledby="click-log-heading">
+        <div class="click-log-header">
+          <h2 id="click-log-heading">Simulated click log</h2>
+          <p>Latest 12 events · demo only</p>
+        </div>
+        <ol class="click-log-list" id="click-log-list" aria-live="polite" aria-relevant="additions">
+          <li class="click-log-empty" id="click-log-empty">Waiting for simulated click activity…</li>
+        </ol>
+      </section>
+      <p class="footnote">Historical OULAD sample data with simulated live updates; this demo is not connected to Google Classroom.</p>
     <% } else { %>
       <% const learner = learners[0]; %>
       <a class="back-link" href="/?week=<%= week %>">← All learners</a>
@@ -520,20 +549,88 @@
       const rows = Array.from(document.querySelectorAll("#learner-rows tr"));
       const emptyState = document.getElementById("empty-state");
       const resultCount = document.getElementById("result-count");
+      const query = () => searchInput.value.trim().toLowerCase();
 
-      searchInput.addEventListener("input", () => {
-        const query = searchInput.value.trim().toLowerCase();
+      const filterRows = () => {
+        const searchTerm = query();
         let visibleCount = 0;
 
         rows.forEach(row => {
-          const matches = row.dataset.search.includes(query);
+          const matches = row.dataset.search.includes(searchTerm);
           row.hidden = !matches;
           if (matches) visibleCount += 1;
         });
 
         emptyState.hidden = visibleCount > 0;
         resultCount.textContent = `${visibleCount.toLocaleString("en-US")} ${visibleCount === 1 ? "learner" : "learners"}`;
-      });
+      };
+
+      searchInput.addEventListener("input", filterRows);
+
+      const liveStatus = document.getElementById("demo-status");
+      const liveUpdated = document.getElementById("demo-updated");
+      const clickLog = document.getElementById("click-log-list");
+      const clickLogEmpty = document.getElementById("click-log-empty");
+      const numberFormat = new Intl.NumberFormat("en-US");
+      const stream = new EventSource(`/api/demo/stream?week=<%= week %>`);
+
+      stream.onopen = () => {
+        liveStatus.dataset.state = "live";
+        liveStatus.textContent = "Simulated live demo";
+      };
+      stream.onerror = () => {
+        liveStatus.dataset.state = "offline";
+        liveStatus.textContent = "Reconnecting";
+        liveUpdated.textContent = "";
+      };
+      stream.onmessage = event => {
+        const update = JSON.parse(event.data);
+        const learner = update.learner;
+        const row = document.querySelector(`[data-learner-id="${learner.id}"]`);
+        if (row) {
+          const isFlagged = learner.risk === 1;
+          row.dataset.search = `${learner.id} ${isFlagged ? "no clicks" : "clicks recorded"}`.toLowerCase();
+          const status = row.querySelector(".status");
+          status.className = `status ${isFlagged ? "flagged" : "clear"}`;
+          status.textContent = isFlagged ? "No clicks" : "Clicks recorded";
+          row.querySelector(".click-count").textContent = numberFormat.format(learner.clicks);
+          filterRows();
+        }
+
+        const analytics = update.analytics;
+        document.getElementById("live-total").textContent = numberFormat.format(analytics.total);
+        document.getElementById("live-flagged").textContent = numberFormat.format(analytics.flaggedCount);
+        document.getElementById("live-rate").textContent = `${analytics.flaggedRate.toFixed(1)}%`;
+        document.getElementById("live-average").textContent = analytics.averageClicks.toFixed(1);
+        document.getElementById("live-summary-rate").textContent = `${analytics.flaggedRate.toFixed(1)}%`;
+        document.getElementById("live-summary-flagged").textContent = numberFormat.format(analytics.flaggedCount);
+        document.getElementById("live-summary-active").textContent = numberFormat.format(analytics.total - analytics.flaggedCount);
+
+        analytics.activityBands.forEach(band => {
+          const row = document.querySelector(`[data-band="${band.label}"]`);
+          row.querySelector(".activity-count").textContent = numberFormat.format(band.count);
+          row.querySelector(".fill").style.width = `${(band.count / analytics.maxActivityCount * 100).toFixed(1)}%`;
+        });
+
+        if (update.clickEvent) {
+          clickLogEmpty.hidden = true;
+          const entry = document.createElement("li");
+          entry.className = "click-log-entry";
+          const message = document.createElement("span");
+          message.textContent = `Learner ${update.clickEvent.learnerId} recorded +${numberFormat.format(update.clickEvent.clicksAdded)} simulated clicks (total: ${numberFormat.format(update.clickEvent.totalClicks)})`;
+          const time = document.createElement("time");
+          time.dateTime = update.clickEvent.occurredAt;
+          time.textContent = new Date(update.clickEvent.occurredAt).toLocaleTimeString();
+          entry.append(message, time);
+          clickLog.insertBefore(entry, clickLog.firstChild);
+          while (clickLog.children.length > 12) {
+            clickLog.removeChild(clickLog.lastElementChild);
+          }
+        }
+
+        liveStatus.dataset.state = "live";
+        liveUpdated.textContent = `Updated ${new Date(update.updatedAt).toLocaleTimeString()}`;
+      };
     }
   </script>
 </body>

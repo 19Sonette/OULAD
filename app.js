@@ -49,6 +49,48 @@ function getCohortAnalytics(learners) {
   };
 }
 
+// Each connected demo session gets its own copy, leaving the sample data unchanged.
+app.get("/api/demo/stream", (req, res) => {
+  const week = req.query.week;
+  if (!["2", "4", "8"].includes(week)) {
+    return res.status(400).send("Invalid demo week.");
+  }
+
+  const learners = learnersByWeek[week].map(learner => ({ ...learner }));
+  res.set({
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+    "Content-Type": "text/event-stream",
+    "X-Accel-Buffering": "no"
+  });
+  res.flushHeaders();
+  res.write("retry: 3000\n\n");
+
+  const sendUpdate = () => {
+    const learner = learners[Math.floor(Math.random() * learners.length)];
+    const clicksAdded = Math.floor(Math.random() * 4) + 1;
+    learner.clicks += clicksAdded;
+    learner.risk = 0;
+    const updatedAt = new Date().toISOString();
+
+    res.write(`data: ${JSON.stringify({
+      learner,
+      analytics: getCohortAnalytics(learners),
+      clickEvent: {
+        learnerId: learner.id,
+        clicksAdded,
+        totalClicks: learner.clicks,
+        occurredAt: updatedAt
+      },
+      updatedAt
+    })}\n\n`);
+  };
+
+  sendUpdate();
+  const interval = setInterval(sendUpdate, 2500);
+  req.on("close", () => clearInterval(interval));
+});
+
 // Show the cohort overview.
 app.get("/", (req, res) => {
   const week = res.locals.week;
