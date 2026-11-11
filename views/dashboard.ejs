@@ -74,7 +74,6 @@
 
     .brand-name { font-size: 14px; font-weight: 740; letter-spacing: .025em; }
     .brand-caption { margin-left: 2px; color: var(--muted); font-size: 11px; }
-    .course-meta { color: #555d64; font-size: 12px; }
     .demo-status { display: inline-flex; align-items: center; gap: 7px; color: #607767; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
     .demo-status::before { width: 7px; height: 7px; border-radius: 50%; background: currentColor; content: ""; }
     .demo-status[data-state="connecting"] { color: var(--gold); }
@@ -108,9 +107,6 @@
     }
 
     .hero-copy { position: relative; z-index: 1; }
-    .course-line { display: flex; align-items: center; gap: 8px; margin-bottom: 11px; color: var(--red-deep); font-size: 10px; font-weight: 730; letter-spacing: .11em; text-transform: uppercase; }
-    .course-line::before { width: 17px; height: 1px; background: var(--red); content: ""; }
-
     h1 {
       margin: 0;
       font-family: Georgia, "Times New Roman", serif;
@@ -329,11 +325,9 @@
       .topbar { height: 58px; }
       main, .topbar-inner { width: calc(100% - 30px); }
       main { padding-top: 20px; }
-      .course-meta { font-size: 10px; }
       .brand-caption { display: none; }
       .hero { min-height: 0; grid-template-columns: minmax(0, 1fr) 88px; gap: 8px; padding: 22px 15px 22px 19px; }
       .hero-subtitle { max-width: 260px; font-size: 11px; }
-      .course-line { font-size: 8px; letter-spacing: .08em; }
       h1 { font-size: 29px; }
       .period-illustration { min-height: 88px; }
       .period-ring { width: 76px; height: 76px; box-shadow: 0 0 0 6px rgb(169 54 59 / 3%); }
@@ -364,20 +358,18 @@
         <span class="brand-name">OULAD</span>
         <span class="brand-caption">Learning analytics</span>
       </a>
-      <div>
-        <% if (!isDetail) { %>
+      <% if (!isDetail) { %>
+        <div>
           <span class="demo-status" id="demo-status" data-state="connecting" role="status">Simulated live demo</span>
           <span class="demo-updated" id="demo-updated">Connecting…</span>
-        <% } %>
-        <span class="course-meta">Module FFF <span aria-hidden="true">·</span> 2014J</span>
-      </div>
+        </div>
+      <% } %>
     </div>
   </header>
 
   <main>
     <section class="hero">
       <div class="hero-copy">
-        <div class="course-line">Module FFF <span aria-hidden="true">/</span> Presentation 2014J</div>
         <h1><%= isDetail ? `Learner ${learners[0].id}` : "Learning activity" %></h1>
         <p class="hero-subtitle"><%= isDetail ? `Learner activity for week ${week}.` : "A clear view of learner activity and participation across the cohort." %></p>
       </div>
@@ -421,7 +413,7 @@
         </article>
         <article class="metric">
           <div class="metric-label">Average clicks</div>
-          <div class="metric-value" id="live-average"><%= analytics.averageClicks.toFixed(1) %></div>
+          <div class="metric-value" id="live-average"><%= analytics.averageClicks.toFixed(3) %></div>
           <div class="metric-detail">Per learner</div>
         </article>
       </section>
@@ -615,7 +607,7 @@
         document.getElementById("live-total").textContent = numberFormat.format(analytics.total);
         document.getElementById("live-flagged").textContent = numberFormat.format(analytics.flaggedCount);
         document.getElementById("live-rate").textContent = `${analytics.flaggedRate.toFixed(1)}%`;
-        document.getElementById("live-average").textContent = analytics.averageClicks.toFixed(1);
+        document.getElementById("live-average").textContent = analytics.averageClicks.toFixed(3);
         document.getElementById("live-summary-rate").textContent = `${analytics.flaggedRate.toFixed(1)}%`;
         document.getElementById("live-summary-flagged").textContent = numberFormat.format(analytics.flaggedCount);
         document.getElementById("live-summary-active").textContent = numberFormat.format(analytics.total - analytics.flaggedCount);

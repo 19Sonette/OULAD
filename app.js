@@ -67,7 +67,9 @@ app.get("/api/demo/stream", (req, res) => {
   res.write("retry: 3000\n\n");
 
   const sendUpdate = () => {
-    const learner = learners[Math.floor(Math.random() * learners.length)];
+    const learnersWithoutClicks = learners.filter(record => record.risk === 1);
+    const learnerPool = learnersWithoutClicks.length ? learnersWithoutClicks : learners;
+    const learner = learnerPool[Math.floor(Math.random() * learnerPool.length)];
     const clicksAdded = Math.floor(Math.random() * 4) + 1;
     learner.clicks += clicksAdded;
     learner.risk = 0;
